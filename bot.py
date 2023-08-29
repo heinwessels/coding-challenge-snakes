@@ -80,14 +80,10 @@ class ApologeticApophis(Bot):
         Randomly pick a move
         """
         vectors = vectors_to_candies(snake[0], candies)
-        if len(vectors) > 0:
-            highest_weight = -100
-            move = None
+        weights = {move:-100 for move in moves}
+        for move in weights.keys():
             for vector in vectors:
-                if any(vector > highest_weight):
-                    highest_weight = max(vector)
-                    move = vector_to_move(vector)
-            if move:
-                return move
-                
-        return choice(moves)
+                if move == vector_to_move(vector):
+                    if max(vector) > weights[move]:
+                        weights[move] = max(vector)
+        return max(weights, key=weights.get)
