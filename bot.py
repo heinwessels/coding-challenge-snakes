@@ -1,6 +1,7 @@
 from random import choice
 from typing import List, Tuple
 
+import math
 import numpy as np
 
 from ...bot import Bot
@@ -24,6 +25,18 @@ def collides(pos: np.array, snakes: List[Snake]) -> bool:
             return True
     return False
 
+def vectors_to_candies(head : np.array, candies: List[np.array]) -> List[np.array]:
+    directions = []
+    for candy in candies:
+        angle = math.atan2(candy[1]-head[1], candy[0] - head[0])
+        directions.append(np.array([math.cos(angle), math.sin(angle)]))
+    return directions
+
+def vector_to_move(vector : np.array) -> Move:
+    if abs(vector[0]) >  abs(vector[1]):
+        return Move.RIGHT if vector[0] > 0 else Move.LEFT
+    else:
+        return Move.UP if vector[1] > 0 else Move.DOWN
 
 class ApologeticApophis(Bot):
     """
@@ -40,7 +53,7 @@ class ApologeticApophis(Bot):
 
     def determine_next_move(self, snake: Snake, other_snakes: List[Snake], candies: List[np.array]) -> Move:
         moves = self._determine_possible_moves(snake, other_snakes[0])
-        return self.choose_move(moves)
+        return self.choose_move(moves, snake, candies)
 
     def _determine_possible_moves(self, snake, other_snake) -> List[Move]:
         """
@@ -62,8 +75,19 @@ class ApologeticApophis(Bot):
         else:
             return on_grid
 
-    def choose_move(self, moves: List[Move]) -> Move:
+    def choose_move(self, moves: List[Move], snake, candies) -> Move:
         """
         Randomly pick a move
         """
+        vectors = vectors_to_candies(snake[0], candies)
+        if len(vectors) > 0:
+            highest_weight = -100
+            move = None
+            for vector in vectors:
+                if any(vector > highest_weight):
+                    highest_weight = max(vector)
+                    move = vector_to_move(vector)
+            if move:
+                return move
+                
         return choice(moves)
