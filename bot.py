@@ -60,13 +60,14 @@ def angle_to_move(angle : float, zig_zag : bool) -> Move:
 class Mood(Enum):
     HUNGRY = auto()
     ANNOYING = auto()
+    CENTERING = auto()
 
 class Annoyance:
     figured_out = False
     primary_direction = None
     secondary_direction = None
     
-    bored = 10
+    bored = 50
     duration = 0
 
 class ApologeticApophis(Bot):
@@ -76,6 +77,7 @@ class ApologeticApophis(Bot):
         self.mood = Mood.HUNGRY
         self.annoyance = Annoyance()
         self.zig_zag = False
+        self.center = (np.array(grid_size) + 1) / 2
 
     @property
     def name(self):
@@ -92,15 +94,15 @@ class ApologeticApophis(Bot):
         self.candies = candies
         self.zig_zag = not self.zig_zag
 
-        if self.mood != Mood.ANNOYING and self._should_start_annoying(snake, other_snakes):
-            print("Starting annoying")
-            self.mood = Mood.ANNOYING
+        if self.mood == Mood.HUNGRY and self._should_start_annoying(snake, other_snakes):
+            print("Starting centering")
+            self.mood = Mood.CENTERING
     
         moves = self._determine_possible_moves(snake, other_snakes[0])
         return self.choose_move(moves, snake, other_snakes, candies)
 
     def _should_start_annoying(self, snake: Snake, other_snakes: List[Snake]):
-        minimim_length = 15
+        minimim_length = 9
         if len(snake) > minimim_length:
             return True
         return False
@@ -125,6 +127,8 @@ class ApologeticApophis(Bot):
             return on_grid
         
     def _figure_out_annoyance(self):
+        print("Figuring out")
+
         other_snake_head = self.other_snake[0]
         angle_to_other_snake = math.atan2(other_snake_head[1]-self.head[1], other_snake_head[0] - self.head[0])
         snapped_angle = round(angle_to_other_snake / (math.pi/4)) * (math.pi/4)
@@ -138,13 +142,23 @@ class ApologeticApophis(Bot):
 
     def choose_move(self, moves: List[Move], snake : Snake, other_snakes : List[Snake], candies) -> Move:
 
+        if self.mood == Mood.CENTERING:
+            to_center_vector = self.center - self.head
+            if sum(abs(to_center_vector)) < 2:
+                print("Gonna be annoying")
+                self.mood = Mood.ANNOYING
+            else:
+                move = vector_to_move(to_center_vector)
+                if move in moves:
+                    return move
+
         if self.mood == Mood.ANNOYING:
             if not self.annoyance.figured_out:
-                self._figure_out_annoyance()
+                    self._figure_out_annoyance()
             else:
                 self.annoyance.duration += 1
                 if self.annoyance.duration == self.annoyance.bored:
-                    self._figure_out_annoyance()
+                    self.mood = Mood.CENTERING
 
             annoyance_move = angle_to_move(self.annoyance.primary_direction, self.zig_zag)
             
@@ -156,6 +170,7 @@ class ApologeticApophis(Bot):
 
             if annoyance_move in moves:
                 return annoyance_move
+            print("No move")
 
         vectors = vectors_to_candies(snake[0], candies)
         weights = {move:-100 for move in moves}
